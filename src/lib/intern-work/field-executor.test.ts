@@ -39,3 +39,22 @@ assert.equal(safeIntent.requiresExternalSigner,true);
 assert.equal(safeIntent.requiredSigner.toLowerCase(),workerTba.toLowerCase());
 const attackerSigner="0x"+"99".repeat(20);
 assert.notEqual(attackerSigner.toLowerCase(),workerTba.toLowerCase(),"result signer substitution must fail closed");
+
+const escrow="0x"+"55".repeat(20);
+const submitData="0xd2ee66cf"+"00".repeat(64);
+const boundedIntent={chainId:46630,to:escrow,value:"0",data:submitData,function:"submitResult",functionSignature:"submitResult(uint256,bytes32)",requiredSigner:workerTba,requiresExternalSigner:true,broadcast:false};
+assert.equal(boundedIntent.to.toLowerCase(),escrow.toLowerCase());
+assert.equal(boundedIntent.chainId,46630);
+assert.equal(boundedIntent.value,"0");
+assert.equal(boundedIntent.data.slice(0,10),"0xd2ee66cf");
+assert.equal(boundedIntent.functionSignature,"submitResult(uint256,bytes32)");
+for(const forbidden of [
+ {...boundedIntent,to:attackerSigner},
+ {...boundedIntent,chainId:4663},
+ {...boundedIntent,value:"1"},
+ {...boundedIntent,data:"0x017e748b"+boundedIntent.data.slice(10)},
+ {...boundedIntent,requiredSigner:attackerSigner}
+]){
+ const valid=forbidden.to.toLowerCase()===escrow.toLowerCase()&&forbidden.chainId===46630&&forbidden.value==="0"&&forbidden.data.startsWith("0xd2ee66cf")&&forbidden.requiredSigner.toLowerCase()===workerTba.toLowerCase();
+ assert.equal(valid,false,"TBA rail must reject target/chain/value/selector/signer substitution");
+}
