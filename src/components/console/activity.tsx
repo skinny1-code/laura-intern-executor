@@ -181,6 +181,7 @@ export function kindTone(kind: SwarmEventKind): string {
     case "pager.pass":
     case "pager.job":
     case "web.fieldwork":
+    case "intern.work.executed":
     case "web.outreach":
     case "proposal.created":
     case "launch.proposed":
