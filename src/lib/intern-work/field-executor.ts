@@ -33,7 +33,7 @@ async function assignedJobs(internIds:Set<string>){
   const internId=String(j[5]),status=Number(j[12]),workerTba=String(j[1]),requirementsHash=String(j[14]);
   if(status!==ASSIGNED||!internIds.has(internId)||!address(workerTba))continue;
   if(!/^0x[0-9a-fA-F]{64}$/.test(requirementsHash)||/^0x0{64}$/i.test(requirementsHash))continue;
-  rows.push({jobId:id.toString(),internId,workerTba,opportunityId:requirementsHash.slice(2).toLowerCase()});
+  rows.push({jobId:id.toString(),internId,workerTba,opportunityId:"sha256:"+requirementsHash.slice(2).toLowerCase()});
  }
  return rows;
 }
