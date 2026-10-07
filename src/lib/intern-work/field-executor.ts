@@ -4,7 +4,7 @@ import { z } from "zod";
 import { createPublicClient, http, parseAbi } from "viem";
 import { wrapUntrusted } from "@/lib/chat/laura";
 import type { ResolvedModel } from "@/lib/swarm/llm";
-import { getInternWorkOpportunity, routeIntern } from "@/lib/intern-work/client";
+import { getInternWorkOpportunity, prepareResult, routeIntern } from "@/lib/intern-work/client";
 
 const MAX_STEPS=10,MAX_TOOL_CALLS=16,TIMEOUT_MS=4*60_000,MAX_JOB_SCAN=64n;
 const ASSIGNED=2;
@@ -22,7 +22,7 @@ function rpc(){
 }
 export interface InternFieldExecution {
  opportunityId:string;jobId:string;internId:string;workerTba:string;serviceId:string;
- result:string;resultHash:string;usedMock:boolean;
+ result:string;resultHash:string;resultIntent:unknown;usedMock:boolean;
 }
 async function assignedJobs(internIds:Set<string>){
  const {client,escrow}=rpc();
@@ -37,12 +37,12 @@ async function assignedJobs(internIds:Set<string>){
  }
  return rows;
 }
-export async function runInternFieldWork(resolved:ResolvedModel,internIds:string[]):Promise<InternFieldExecution|null>{
+export async function runInternFieldWork(resolved:ResolvedModel,internIds:string[],excludedJobIds:Set<string>=new Set()):Promise<InternFieldExecution|null>{
  if(!resolved.model||internIds.length===0)return null;
  const allowedIds=new Set(internIds.filter(x=>/^\d+$/.test(x)));
  if(!allowedIds.size)return null;
  const assignments=await assignedJobs(allowedIds);
- for(const assignment of assignments){
+ for(const assignment of assignments){\n  if(excludedJobIds.has(assignment.jobId))continue;
   const job=await getInternWorkOpportunity(assignment.opportunityId);
   if(!job||!supported.has(job.executionSpec.serviceId))continue;
   const routed=await routeIntern(job.fingerprint,[assignment.internId]);
