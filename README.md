@@ -438,3 +438,56 @@ PRs are welcome and every change is maintainer-reviewed before merge - see
 MIT - see [LICENSE](./LICENSE). This repo is standalone agent tooling; the
 broader StonkBrokers protocol contracts live elsewhere under their own
 license.
+
+
+## INTERN WORK RELEASE CHECKPOINT — READ BEFORE CHANGING (2026-10-07)
+
+The Stonk Intern Work Network itself is already Robinhood-testnet certified. Do **not** reopen or redesign its escrow, economics, settlement, dispute flow, or revenue rail merely to validate this executor.
+
+**Completed baseline:** chain 46630; certified escrow `0x9416C1b2C3E799b9CeeF0A9499d29AaC5806b068`; Job #2 normal lifecycle/settlement; Job #3 dispute/resolver lifecycle/settlement; chain-46630 revenue guard corrected/retested; Work API smoke certified.
+
+**This fork's completed code:** existing LAURA scheduler integration; Assigned-only/configured-Intern scanning; canonical opportunity recovery; qualification + worker-TBA recheck; untrusted instruction wrapping; bounded execution; deterministic evidence hash; unsigned `submitResult` preparation; fail-closed checks for `broadcast=false`, external signer requirement, and exact worker-TBA signer. The audit already fixed the double-`sha256:` lookup defect and the missing `prepareResult()` handoff. Functional head `50fce56a21e3c637458b9ba1a7125f37afb77442` passed break tests, typecheck and production build.
+
+**Next and only current bridge blocker:** implement the authorized Intern TBA signing/submission rail. Signing stays on the LAURA/operator side, never in the Work API. It must be narrowly allowlisted to the certified escrow and expected `submitResult(uint256,bytes32)` call; do not introduce a generic arbitrary transaction executor.
+
+**Then run the full bridge workflow:** funded/assigned test job -> LAURA discovery -> supported execution -> evidence -> result hash -> TBA submission -> independent verifier -> existing settlement -> Work Receipt.
+
+**Do not add while finishing this gate:** XP (post-mainnet), a database rewrite, Pager redesign, SIMU integration, escrow/payout changes, or client portal work. Mainnet is not deployed and remains after the bridge workflow/security evidence.
+
+## Stonk Intern paid field work — current state
+
+This fork contains the pre-mainnet executor bridge to `skinny1-code/stonk-intern-work`. It is intentionally integrated into LAURA's existing swarm scheduler; it does not create a second autonomous scheduler.
+
+Implemented on `intern-field-executor`:
+- authenticated Work Network client;
+- strict allowlist for supported `AGENT_EXECUTABLE` service classes;
+- only on-chain escrow jobs already in `Assigned` state are eligible for execution;
+- only Intern IDs explicitly configured in `INTERN_WORK_INTERN_IDS` are considered;
+- canonical opportunity identity is recovered from the escrow `requirementsHash`;
+- authoritative qualification and assigned TBA identity are rechecked before execution;
+- external job instructions are wrapped as untrusted data;
+- model steps, tool calls and wall-clock execution are bounded;
+- evidence must be explicitly captured; empty/unsupported execution does not become a result;
+- evidence is SHA-256 hashed deterministically;
+- the resulting `submitResult` transaction is prepared as an unsigned intent requiring the assigned Intern TBA signer;
+- LAURA does not receive a private key and does not broadcast that transaction.
+
+CI proof: exact head `50fce56a21e3c637458b9ba1a7125f37afb77442` passed the Intern executor safety/break tests, TypeScript typecheck and production build. The audit fixed canonical opportunity lookup and bound captured evidence to a signer-checked, unsigned `submitResult` intent.
+
+Completed baseline inherited from the Work Network:
+- funded Robinhood testnet certification on chain 46630;
+- certified escrow `0x9416C1b2C3E799b9CeeF0A9499d29AaC5806b068`;
+- Job #2 normal lifecycle/settlement;
+- Job #3 dispute/resolver lifecycle/settlement;
+- chain-46630 revenue-guard correction and retest;
+- Work API live-service smoke certification.
+
+Those completed tests are not reopened by this fork.
+
+Remaining scope is limited to the new LAURA executor bridge:
+1. production-authorized TBA signing/submission rail without exposing key material to the Work API;
+2. integrated LAURA execution evidence through the already-certified verifier/settlement path;
+3. final bridge security/release evidence and exact-head CI;
+4. mainnet configuration/deployment only after the new bridge gates pass.
+
+No mainnet deployment, autonomous broadcast, XP activation, or production-ready claim is made by this branch.

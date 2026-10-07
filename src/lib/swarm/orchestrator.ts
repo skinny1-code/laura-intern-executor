@@ -94,6 +94,7 @@ import { runXVoiceStudy } from "@/lib/swarm/x-voice";
 import { runDesk } from "@/lib/swarm/desk";
 import { runForeman } from "@/lib/swarm/foreman";
 import { fieldworkDigest, runRanger } from "@/lib/web/ranger";
+import { runInternFieldWork } from "@/lib/intern-work/field-executor";
 import { runTreasurer } from "@/lib/swarm/treasurer";
 import { tokenTapeDigest } from "@/lib/swarm/token-tape";
 import { stripLaunchSignoffs } from "@/lib/launchpad/copy";
@@ -1080,6 +1081,34 @@ async function executeCycle(trigger: CycleRun["trigger"]): Promise<CycleRun> {
         ranger.lastError = String(err);
         step({ agentId: "ranger", label: "Fieldwork", status: "error", summary: String(err), durationMs: Date.now() - t0 });
         pushEvent(state, { kind: "error", agentId: "ranger", title: "Ranger failed", detail: String(err), refId: run.id });
+      }
+      await saveState(state);
+    }
+
+    /* 3a4. Paid Intern field work. This is downstream of LAURA's existing
+       scheduler, not a second autonomous loop. Only onchain Assigned jobs for
+       explicitly configured Intern IDs are eligible. */
+    const fieldInternIds=String(process.env.INTERN_WORK_INTERN_IDS??"").split(",").map(x=>x.trim()).filter(x=>/^\d+$/.test(x));
+    if(fieldInternIds.length){
+      const completed=new Set(state.events.filter(e=>e.kind==="intern.work.executed").map(e=>String(e.refId??"")).filter(Boolean));
+      const t0=Date.now();
+      try{
+        const work=await runInternFieldWork(resolved,fieldInternIds,completed);
+        if(work){
+          pushEvent(state,{
+            kind:"intern.work.executed",
+            agentId:"ranger",
+            title:`Intern #${work.internId} completed paid field evidence for job #${work.jobId}`,
+            detail:`Service ${work.serviceId} · result ${work.resultHash} · unsigned result intent prepared for TBA ${work.workerTba}`,
+            refId:work.jobId,
+          });
+          step({agentId:"ranger",label:"Paid Intern work",status:"ok",summary:`Job #${work.jobId} evidence prepared for Intern #${work.internId}; external TBA signature required`,durationMs:Date.now()-t0});
+        }else{
+          step({agentId:"ranger",label:"Paid Intern work",status:"skipped",summary:"No new funded, assigned, qualified executable Intern job",durationMs:Date.now()-t0});
+        }
+      }catch(err){
+        step({agentId:"ranger",label:"Paid Intern work",status:"error",summary:String(err),durationMs:Date.now()-t0});
+        pushEvent(state,{kind:"error",agentId:"ranger",title:"Paid Intern field work failed",detail:String(err),refId:run.id});
       }
       await saveState(state);
     }
