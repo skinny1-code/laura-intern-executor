@@ -5,6 +5,7 @@ import { createPublicClient, http, parseAbi } from "viem";
 import { wrapUntrusted } from "@/lib/chat/laura";
 import type { ResolvedModel } from "@/lib/swarm/llm";
 import { getInternWorkOpportunity, prepareResult, routeIntern } from "@/lib/intern-work/client";
+import { submitResultThroughTba } from "@/lib/intern-work/tba-submitter";
 
 const MAX_STEPS=10,MAX_TOOL_CALLS=16,TIMEOUT_MS=4*60_000,MAX_JOB_SCAN=64n;
 const ASSIGNED=2;
@@ -22,7 +23,7 @@ function rpc(){
 }
 export interface InternFieldExecution {
  opportunityId:string;jobId:string;internId:string;workerTba:string;serviceId:string;
- result:string;resultHash:string;resultIntent:unknown;usedMock:boolean;
+ result:string;resultHash:string;resultIntent:unknown;submission:unknown;usedMock:boolean;
 }
 async function assignedJobs(internIds:Set<string>){
  const {client,escrow}=rpc();
@@ -71,7 +72,8 @@ Use only tools already available in this execution. Never invent actions. Call s
   const resultIntent=prepared?.intent;
   if(!resultIntent||resultIntent.broadcast!==false||resultIntent.requiresExternalSigner!==true)throw new Error("UNSAFE_RESULT_INTENT");
   if(String(resultIntent.requiredSigner??"").toLowerCase()!==assignment.workerTba.toLowerCase())throw new Error("RESULT_SIGNER_MISMATCH");
-  return {...assignment,serviceId:job.executionSpec.serviceId,result:evidence,resultHash,resultIntent,usedMock:false};
+  const submission=await submitResultThroughTba(resultIntent,assignment.workerTba);
+  return {...assignment,serviceId:job.executionSpec.serviceId,result:evidence,resultHash,resultIntent,submission,usedMock:false};
  }
  return null;
 }
