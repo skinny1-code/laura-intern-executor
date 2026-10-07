@@ -26,7 +26,7 @@ export async function discoverInternWork(){return call("/v1/opportunities/discov
 export async function internWorkCandidates(){
  const j=await call("/v1/opportunities");const rows=Array.isArray(j.opportunities)?j.opportunities:[];
  return rows.filter((x:any)=>x?.routable===true&&x?.executionClass==="AGENT_EXECUTABLE"&&x?.executionSpec?.serviceId)
-   .map((x:any)=>work.parse(x)).sort((a,b)=>b.expectedNet-a.expectedNet||a.fingerprint.localeCompare(b.fingerprint));
+   .map((x:any)=>work.parse(x)).sort((a:z.infer<typeof work>,b:z.infer<typeof work>)=>b.expectedNet-a.expectedNet||a.fingerprint.localeCompare(b.fingerprint));
 }
 export async function getInternWorkOpportunity(opportunityId:string){
  const j=await call("/v1/opportunities");
