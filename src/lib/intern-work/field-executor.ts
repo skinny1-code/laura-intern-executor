@@ -44,7 +44,7 @@ export async function runInternFieldWork(resolved:ResolvedModel,internIds:string
  const assignments=await assignedJobs(allowedIds);
  for(const assignment of assignments){
   if(excludedJobIds.has(assignment.jobId))continue;
-  const job=await getInternWorkOpportunity(`sha256:${assignment.opportunityId}`);
+  const job=await getInternWorkOpportunity(assignment.opportunityId);
   if(!job||!supported.has(job.executionSpec.serviceId))continue;
   const routed=await routeIntern(job.fingerprint,[assignment.internId]);
   const worker=Array.isArray(routed.eligible)?routed.eligible.find((x:any)=>String(x.internId)===assignment.internId):null;
