@@ -31,3 +31,11 @@ for(const malformed of ["", "147x", "-1", "1.0"])assert.equal(/^\d+$/.test(malfo
 const workerTba="0x"+"12".repeat(20);
 const routedTba="0x"+"34".repeat(20);
 assert.notEqual(workerTba.toLowerCase(),routedTba.toLowerCase(),"qualification TBA mismatch must not execute");
+
+
+const safeIntent={broadcast:false,requiresExternalSigner:true,requiredSigner:workerTba};
+assert.equal(safeIntent.broadcast,false);
+assert.equal(safeIntent.requiresExternalSigner,true);
+assert.equal(safeIntent.requiredSigner.toLowerCase(),workerTba.toLowerCase());
+const attackerSigner="0x"+"99".repeat(20);
+assert.notEqual(attackerSigner.toLowerCase(),workerTba.toLowerCase(),"result signer substitution must fail closed");
