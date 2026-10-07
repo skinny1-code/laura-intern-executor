@@ -42,7 +42,8 @@ export async function runInternFieldWork(resolved:ResolvedModel,internIds:string
  const allowedIds=new Set(internIds.filter(x=>/^\d+$/.test(x)));
  if(!allowedIds.size)return null;
  const assignments=await assignedJobs(allowedIds);
- for(const assignment of assignments){\n  if(excludedJobIds.has(assignment.jobId))continue;
+ for(const assignment of assignments){
+  if(excludedJobIds.has(assignment.jobId))continue;
   const job=await getInternWorkOpportunity(assignment.opportunityId);
   if(!job||!supported.has(job.executionSpec.serviceId))continue;
   const routed=await routeIntern(job.fingerprint,[assignment.internId]);
