@@ -3,6 +3,7 @@ import { z } from "zod";
 const work = z.object({
   fingerprint:z.string().min(8),
   title:z.string(),
+  requiredTier:z.coerce.number().int().min(0),
   expectedNet:z.coerce.number(),
   executionClass:z.literal("AGENT_EXECUTABLE"),
   executionSpec:z.object({
