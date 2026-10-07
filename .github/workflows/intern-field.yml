@@ -1,0 +1,27 @@
+name: Intern Field Executor
+on:
+  pull_request:
+    paths:
+      - "src/lib/intern-work/**"
+      - "src/lib/swarm/orchestrator.ts"
+      - ".github/workflows/intern-field.yml"
+  push:
+    branches: ["intern-field-executor"]
+    paths:
+      - "src/lib/intern-work/**"
+      - "src/lib/swarm/orchestrator.ts"
+      - ".github/workflows/intern-field.yml"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsx src/lib/intern-work/field-executor.test.ts
+      - run: npm run typecheck
+      - run: npm run build
