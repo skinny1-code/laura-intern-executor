@@ -460,12 +460,20 @@ Implemented on `intern-field-executor`:
 
 CI proof: exact head `bbd9029da10b889d447331ccf05628a964ae8c93` passed the Intern executor safety test, TypeScript typecheck and production build. Later documentation-only commits must still pass exact-head CI before merge.
 
-Still required before this bridge can be called end-to-end autonomous production work:
-1. exact-head CI after final audit/break-test changes;
-2. production-authorized TBA signing/submission rail without exposing key material to the Work API;
-3. independent verifier action/settlement path exercised through the integrated bridge;
-4. live testnet job from funding through assignment, LAURA execution, result submission, independent verification, settlement and Work Receipt;
-5. final security audit and release evidence;
-6. mainnet configuration/deployment only after those gates pass.
+Completed baseline inherited from the Work Network:
+- funded Robinhood testnet certification on chain 46630;
+- certified escrow `0x9416C1b2C3E799b9CeeF0A9499d29AaC5806b068`;
+- Job #2 normal lifecycle/settlement;
+- Job #3 dispute/resolver lifecycle/settlement;
+- chain-46630 revenue-guard correction and retest;
+- Work API live-service smoke certification.
+
+Those completed tests are not reopened by this fork.
+
+Remaining scope is limited to the new LAURA executor bridge:
+1. production-authorized TBA signing/submission rail without exposing key material to the Work API;
+2. integrated LAURA execution evidence through the already-certified verifier/settlement path;
+3. final bridge security/release evidence and exact-head CI;
+4. mainnet configuration/deployment only after the new bridge gates pass.
 
 No mainnet deployment, autonomous broadcast, XP activation, or production-ready claim is made by this branch.
