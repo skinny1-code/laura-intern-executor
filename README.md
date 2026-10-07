@@ -438,3 +438,34 @@ PRs are welcome and every change is maintainer-reviewed before merge - see
 MIT - see [LICENSE](./LICENSE). This repo is standalone agent tooling; the
 broader StonkBrokers protocol contracts live elsewhere under their own
 license.
+
+
+## Stonk Intern paid field work — current state
+
+This fork contains the pre-mainnet executor bridge to `skinny1-code/stonk-intern-work`. It is intentionally integrated into LAURA's existing swarm scheduler; it does not create a second autonomous scheduler.
+
+Implemented on `intern-field-executor`:
+- authenticated Work Network client;
+- strict allowlist for supported `AGENT_EXECUTABLE` service classes;
+- only on-chain escrow jobs already in `Assigned` state are eligible for execution;
+- only Intern IDs explicitly configured in `INTERN_WORK_INTERN_IDS` are considered;
+- canonical opportunity identity is recovered from the escrow `requirementsHash`;
+- authoritative qualification and assigned TBA identity are rechecked before execution;
+- external job instructions are wrapped as untrusted data;
+- model steps, tool calls and wall-clock execution are bounded;
+- evidence must be explicitly captured; empty/unsupported execution does not become a result;
+- evidence is SHA-256 hashed deterministically;
+- the resulting `submitResult` transaction is prepared as an unsigned intent requiring the assigned Intern TBA signer;
+- LAURA does not receive a private key and does not broadcast that transaction.
+
+CI proof: exact head `bbd9029da10b889d447331ccf05628a964ae8c93` passed the Intern executor safety test, TypeScript typecheck and production build. Later documentation-only commits must still pass exact-head CI before merge.
+
+Still required before this bridge can be called end-to-end autonomous production work:
+1. exact-head CI after final audit/break-test changes;
+2. production-authorized TBA signing/submission rail without exposing key material to the Work API;
+3. independent verifier action/settlement path exercised through the integrated bridge;
+4. live testnet job from funding through assignment, LAURA execution, result submission, independent verification, settlement and Work Receipt;
+5. final security audit and release evidence;
+6. mainnet configuration/deployment only after those gates pass.
+
+No mainnet deployment, autonomous broadcast, XP activation, or production-ready claim is made by this branch.
