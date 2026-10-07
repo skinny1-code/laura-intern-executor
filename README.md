@@ -458,7 +458,7 @@ Implemented on `intern-field-executor`:
 - the resulting `submitResult` transaction is prepared as an unsigned intent requiring the assigned Intern TBA signer;
 - LAURA does not receive a private key and does not broadcast that transaction.
 
-CI proof: exact head `bbd9029da10b889d447331ccf05628a964ae8c93` passed the Intern executor safety test, TypeScript typecheck and production build. Later documentation-only commits must still pass exact-head CI before merge.
+CI proof: exact head `50fce56a21e3c637458b9ba1a7125f37afb77442` passed the Intern executor safety/break tests, TypeScript typecheck and production build. The audit fixed canonical opportunity lookup and bound captured evidence to a signer-checked, unsigned `submitResult` intent.
 
 Completed baseline inherited from the Work Network:
 - funded Robinhood testnet certification on chain 46630;
