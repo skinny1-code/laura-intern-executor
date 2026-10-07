@@ -67,7 +67,11 @@ Use only tools already available in this execution. Never invent actions. Call s
   const out=await generateText({model:resolved.model,prompt,tools,stopWhen:stepCountIs(MAX_STEPS),maxRetries:1,abortSignal:AbortSignal.timeout(TIMEOUT_MS)});
   if(!evidence)continue;
   const resultHash="0x"+createHash("sha256").update(evidence,"utf8").digest("hex");
-  return {...assignment,serviceId:job.executionSpec.serviceId,result:evidence,resultHash,usedMock:false};
+  const prepared=await prepareResult({jobId:assignment.jobId,resultHash,workerTba:assignment.workerTba});
+  const resultIntent=prepared?.intent;
+  if(!resultIntent||resultIntent.broadcast!==false||resultIntent.requiresExternalSigner!==true)throw new Error("UNSAFE_RESULT_INTENT");
+  if(String(resultIntent.requiredSigner??"").toLowerCase()!==assignment.workerTba.toLowerCase())throw new Error("RESULT_SIGNER_MISMATCH");
+  return {...assignment,serviceId:job.executionSpec.serviceId,result:evidence,resultHash,resultIntent,usedMock:false};
  }
  return null;
 }
