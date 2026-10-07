@@ -28,6 +28,12 @@ export async function internWorkCandidates(){
  return rows.filter((x:any)=>x?.routable===true&&x?.executionClass==="AGENT_EXECUTABLE"&&x?.executionSpec?.serviceId)
    .map((x:any)=>work.parse(x)).sort((a,b)=>b.expectedNet-a.expectedNet||a.fingerprint.localeCompare(b.fingerprint));
 }
+export async function getInternWorkOpportunity(opportunityId:string){
+ const j=await call("/v1/opportunities");
+ const rows=Array.isArray(j.opportunities)?j.opportunities:[];
+ const hit=rows.find((x:any)=>x?.fingerprint===opportunityId);
+ return hit?work.parse(hit):null;
+}
 export async function routeIntern(opportunityId:string,internIds:string[]){
  const interns=internIds.map(internId=>({internId}));
  return call("/v1/qualifications/route",{method:"POST",body:JSON.stringify({opportunityId,interns})});
