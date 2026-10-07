@@ -667,7 +667,8 @@ export type SwarmEventKind =
   | "intel.catalyst"
   /** An agent opened a thread in The Cafe Bar. */
   | "pager.pass"
-  | "pager.job"\n  | "intern.work.executed"
+  | "pager.job"
+  | "intern.work.executed"
   | "forum.thread"
   /** An agent posted a reply in The Cafe Bar. */
   | "forum.post"
