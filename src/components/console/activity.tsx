@@ -32,6 +32,7 @@ function groupOf(kind: SwarmEventKind): Exclude<Group, "all"> {
     case "pager.pass":
     case "pager.job":
     case "web.fieldwork":
+    case "intern.work.executed":
     case "web.outreach":
     case "x.replied":
     case "x.followed":
@@ -100,6 +101,7 @@ function groupOf(kind: SwarmEventKind): Exclude<Group, "all"> {
     case "forge.deployed":
     case "forge.verified":
     case "forge.failed":
+    case "intern.work.executed":
       return "operator";
     default: {
       const _exhaustive: never = kind;
