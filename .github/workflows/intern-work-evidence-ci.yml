@@ -1,0 +1,27 @@
+name: LAURA Intern Work Evidence
+on:
+  push:
+    branches:
+      - feat/intern-work-laura-execution-20261012
+  pull_request:
+    paths:
+      - src/lib/intern-work/**
+      - src/app/api/intern-work/**
+      - .github/workflows/intern-work-evidence-ci.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Offline Intern NFT 3536 evidence and security tests
+        run: npx tsx --test src/lib/intern-work/execute.test.ts
+      - name: Typecheck LAURA Next.js including gated work route
+        run: npm run typecheck
