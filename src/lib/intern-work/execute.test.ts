@@ -103,3 +103,17 @@ test("LAURA only reads assigned customer requirements through the private bearer
    else process.env.LAURA_INTERN_WORK_TOKEN=prior;
  }
 });
+
+test("work-only host denies every other route and never boots bots",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const {fileURLToPath}=await import("node:url");
+ const proxy=readFileSync(fileURLToPath(new URL("../../proxy.ts",import.meta.url)),"utf8");
+ const instrumentation=readFileSync(fileURLToPath(new URL("../../instrumentation.ts",import.meta.url)),"utf8");
+ assert.match(proxy,/LAURA_INTERN_WORK_ONLY/);
+ assert.match(proxy,/path==="\/api\/intern-work\/execute"/);
+ assert.match(proxy,/path==="\/api\/health"/);
+ assert.match(proxy,/status:404/);
+ assert.match(instrumentation,/LAURA_INTERN_WORK_ONLY === "true"/);
+ assert.ok(instrumentation.indexOf('LAURA_INTERN_WORK_ONLY === "true"')<
+   instrumentation.indexOf('const { startBots }'));
+});
