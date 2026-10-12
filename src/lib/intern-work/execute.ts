@@ -61,14 +61,19 @@ export function assertJob(job:Job,internId:string){
 }
 export async function getBoardJob(jobId:string,fetcher:typeof fetch=fetch):Promise<Job>{
  check(/^agentjob:[a-f0-9]{64}$/.test(jobId),"INVALID_BOARD_JOB_ID");
- const res=await fetcher(STAGING.board+"/v1/agent-board/jobs",{signal:AbortSignal.timeout(20000),
-   headers:{"accept":"application/json","cache-control":"no-cache"}});
- check(res.ok,"STAGING_BOARD_UNAVAILABLE");
+ const token=String(process.env.LAURA_INTERN_WORK_TOKEN||"");
+ check(token.length>=32,"LAURA_PRIVATE_JOB_CREDENTIAL_MISSING");
+ const res=await fetcher(STAGING.board+"/v1/laura/jobs/"+jobId,{
+   signal:AbortSignal.timeout(20000),
+   headers:{"accept":"application/json","cache-control":"no-cache","authorization":"Bearer "+token}
+ });
+ check(res.ok,"STAGING_PRIVATE_WORK_UNAVAILABLE");
  const payload:unknown=await res.json();
- check(!!payload&&typeof payload==="object"&&Array.isArray((payload as {jobs?:unknown}).jobs),"INVALID_BOARD_RESPONSE");
- const matches=(payload as {jobs:Job[]}).jobs.filter(j=>j.id===jobId);
- check(matches.length===1,"ASSIGNED_JOB_NOT_FOUND");
- return matches[0];
+ check(!!payload&&typeof payload==="object"&&!!(payload as {job?:unknown}).job,
+   "INVALID_PRIVATE_WORK_RESPONSE");
+ const job=(payload as {job:Job}).job;
+ check(job.id===jobId,"PRIVATE_JOB_ID_MISMATCH");
+ return job;
 }
 export async function getChainEvidence(job:Job,target:string):Promise<ChainEvidence>{
  const client=createPublicClient({chain:{id:46630,name:"Robinhood Testnet",
