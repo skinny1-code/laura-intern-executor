@@ -10,6 +10,12 @@
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  // A dedicated testnet work API must never launch bots, scheduled agents,
+  // chat connectors, trading, or the general LAURA console.
+  if (process.env.LAURA_INTERN_WORK_ONLY === "true") {
+    console.log("[laura] isolated Intern work API: swarm and all bots disabled");
+    return;
+  }
   /* Public viewer deployment: a passive renderer of published snapshots.
      No bots, no scheduler, no executor — nothing that acts or spends. */
   if (process.env.VIEWER_MODE === "1" || process.env.NEXT_PUBLIC_VIEWER_MODE === "1") {
