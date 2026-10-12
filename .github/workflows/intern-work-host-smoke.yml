@@ -1,0 +1,24 @@
+name: Isolated LAURA Worker Host Smoke
+on:
+  push:
+    branches: [feat/intern-work-laura-execution-20261012]
+    paths: [.github/workflows/intern-work-host-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify deployed worker-only route allowlist and auth
+        run: |
+          set -euo pipefail
+          BASE="https://laura-intern-work-qa-rawagon-projects.vercel.app"
+          curl -sSfL --max-time 75 --retry 3 --retry-delay 3 "$BASE/api/health" | jq -e '.ok==true and .autopilot==false' >/dev/null
+          status="$(curl -sSL -w '%{http_code}' -o /dev/null --max-time 45 -X POST "$BASE/api/intern-work/execute" -H 'content-type: application/json' -d '{"internId":"3536","boardJobId":"agentjob:0000000000000000000000000000000000000000000000000000000000000000"}')"
+          test "$status" = "401"
+          ops="$(curl -sSL -w '%{http_code}' -o /dev/null --max-time 45 "$BASE/api/ops/status")"
+          test "$ops" = "404"
+          root="$(curl -sSL -w '%{http_code}' -o /dev/null --max-time 45 "$BASE/")"
+          test "$root" = "404"
+          echo "PASS_WORK_ONLY_EXECUTOR_UP_NO_SWARM_AND_UNAUTHORIZED_DENIED"
