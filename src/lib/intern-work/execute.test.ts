@@ -1,7 +1,7 @@
 import test from "node:test";
 import {createHash} from "node:crypto";
 import assert from "node:assert/strict";
-import {executeWalletVerification,assertJob,STAGING,type Job,type ChainEvidence} from "./execute";
+import {executeWalletVerification,assertJob,getBoardJob,STAGING,type Job,type ChainEvidence} from "./execute";
 
 const ID="agentjob:"+"2e76eb74103f0f0e7e85063e5285c863329606f29904544bfdd605131e4cbeca";
 const BUYER="0x30b2fe82f904910065eeecb71bb3665937fb1de7";
@@ -81,4 +81,25 @@ test("LAURA checks complete job instructions against onchain hash and selects ex
   assert.equal(target.address.toLowerCase(),BUYER.toLowerCase());
   assert.throws(()=>assertJob({...details,requirementsText:instruction+" forged"},"3536"),
     /INSTRUCTIONS_HASH_MISMATCH/);
+});
+
+
+test("LAURA only reads assigned customer requirements through the private bearer endpoint",async()=>{
+ const prior=process.env.LAURA_INTERN_WORK_TOKEN;
+ const secret="independent-private-laura-executor-test-token";
+ process.env.LAURA_INTERN_WORK_TOKEN=secret;
+ try{
+   let requested=false;
+   const stub=async(url:string,options?:RequestInit)=>{
+     requested=true;
+     assert.equal(url,STAGING.board+"/v1/laura/jobs/"+ID);
+     assert.equal((options?.headers as Record<string,string>).authorization,"Bearer "+secret);
+     return {ok:true,async json(){return {job:{...job,requirementsText:null}};}} as Response;
+   };
+   assert.equal((await getBoardJob(ID,stub as typeof fetch)).id,ID);
+   assert.equal(requested,true);
+ }finally{
+   if(prior===undefined)delete process.env.LAURA_INTERN_WORK_TOKEN;
+   else process.env.LAURA_INTERN_WORK_TOKEN=prior;
+ }
 });
