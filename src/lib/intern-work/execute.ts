@@ -4,7 +4,12 @@ import {generateChat,resolveModel} from "@/lib/swarm/llm";
 
 /** Isolated LAURA work execution: read-only testnet, no key custody or payouts. */
 export const STAGING=Object.freeze({
- board:"https://stonk-intern-work-pr45-qa.onrender.com",
+ board:(()=>{
+   const url=process.env.LAURA_WORK_BOARD_URL||"https://stonk-intern-work-pr45-qa.onrender.com";
+   if(!["https://stonk-intern-work-pr45-qa.onrender.com","https://stonk-intern-laura-sandbox.onrender.com"].includes(url))
+     throw new Error("LAURA_BOARD_NOT_ALLOWLISTED");
+   return url;
+ })(),
  chainId:46630,
  rpc:"https://rpc.testnet.chain.robinhood.com",
  escrow:"0x656E46dc55E383b1f927617301A3E1580a576B2D",
