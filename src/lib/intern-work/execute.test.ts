@@ -1,4 +1,5 @@
 import test from "node:test";
+import {createHash} from "node:crypto";
 import assert from "node:assert/strict";
 import {executeWalletVerification,assertJob,STAGING,type Job,type ChainEvidence} from "./execute";
 
@@ -69,4 +70,15 @@ test("LAURA refuses unverified RPC evidence",async()=>{
 test("LAURA refuses two conflicting wallet targets",()=>{
  assert.throws(()=>assertJob({...job,description:BUYER+" "+STAGING.owner},"3536"),
    /AMBIGUOUS_WALLET_TARGET/);
+});
+
+test("LAURA checks complete job instructions against onchain hash and selects explicit target",()=>{
+  const instruction="Verify wallet 0x30b2fe82f904910065eeecb71bb3665937fb1de7";
+  const hash="0x"+createHash("sha256").update(instruction).digest("hex");
+  const details={...job,requirementsText:instruction,requirementsHash:hash};
+  const target=assertJob(details,"3536");
+  assert.equal(target.source,"job_description");
+  assert.equal(target.address.toLowerCase(),BUYER.toLowerCase());
+  assert.throws(()=>assertJob({...details,requirementsText:instruction+" forged"},"3536"),
+    /INSTRUCTIONS_HASH_MISMATCH/);
 });
