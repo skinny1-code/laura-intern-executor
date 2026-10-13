@@ -199,6 +199,7 @@ export async function executeInternWork(input:{boardJobId:string;internId:string
     "CHAIN_OR_ESCROW_MISMATCH");
   const evidence=assertServiceEvidence(job);
   check(!!evidence,"SERVICE_EVIDENCE_REQUIRED");
+  const chainEvidence=await getChainEvidence(job,job.clientAddress);
   // Source details originate from immutable, hashed customer instructions.
   // Do not provide a signing or arbitrary tool interface to untrusted jobs.
   const modelSummary=deps.summarize|| (async(j:Job,ev:Record<string,unknown>)=>{
@@ -217,7 +218,7 @@ export async function executeInternWork(input:{boardJobId:string;internId:string
     schema:"laura.intern-work.catalog-evidence/1",executor:"LAURA",serviceId:job.serviceId,
     boardJobId:job.id,onchainJobId:job.onchain!.jobId,internId:input.internId,
     payoutAccount:STAGING.payoutAccount,chainId:46630,requirementsHash:job.requirementsHash,
-    evidence,analysis:llm.text.trim(),modelId:llm.modelId,
+    evidence,chainEvidence,analysis:llm.text.trim(),modelId:llm.modelId,
     verificationStatus:"PENDING_INDEPENDENT_VERIFIER",
     limitations:["Customer-provided observations are not independent on-chain or external verification.",
       "No results, tests, security findings or financial reconciliation are certified by inference alone."]
