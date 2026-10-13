@@ -15,15 +15,17 @@ export interface ResolvedModel {
 const DEFAULT_MODELS: Record<Exclude<LlmProvider, "mock">, string> = {
   anthropic: "claude-fable-5-1",
   openai: "gpt-4.1-mini",
+  gemini: "gemini-2.5-flash",
 };
 
 export function resolveModel(overrideModel?: string): ResolvedModel {
   const forced = process.env.SWARM_LLM_PROVIDER as LlmProvider | undefined;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
   const pick: LlmProvider =
-    forced ?? (anthropicKey ? "anthropic" : openaiKey ? "openai" : "mock");
+    forced ?? (anthropicKey ? "anthropic" : openaiKey ? "openai" : geminiKey ? "gemini" : "mock");
 
   switch (pick) {
     case "anthropic": {
@@ -35,6 +37,15 @@ export function resolveModel(overrideModel?: string): ResolvedModel {
       if (!openaiKey) return { provider: "mock", modelId: "mock", model: null };
       const id = overrideModel || DEFAULT_MODELS.openai;
       return { provider: "openai", modelId: id, model: createOpenAI({ apiKey: openaiKey })(id) };
+    }
+    case "gemini": {
+      if (!geminiKey) return { provider: "mock", modelId: "mock", model: null };
+      const id = overrideModel || process.env.GEMINI_MODEL || DEFAULT_MODELS.gemini;
+      const google = createOpenAI({
+        apiKey: geminiKey,
+        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      });
+      return { provider: "gemini", modelId: id, model: google.chat(id) };
     }
     case "mock":
       return { provider: "mock", modelId: "mock", model: null };
