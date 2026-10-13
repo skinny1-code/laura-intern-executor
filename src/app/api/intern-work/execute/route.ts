@@ -1,6 +1,6 @@
 import {timingSafeEqual} from "node:crypto";
 import {NextResponse,type NextRequest} from "next/server";
-import {executeWalletVerification,WorkExecutionError} from "@/lib/intern-work/execute";
+import {executeInternWork,WorkExecutionError} from "@/lib/intern-work/execute";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -34,7 +34,7 @@ export async function POST(req:NextRequest){
    const data=input as Record<string,unknown>;
    if(typeof data.boardJobId!=="string"||typeof data.internId!=="string")
      return NextResponse.json({error:"INVALID_INPUT"},{status:400,headers});
-   const result=await executeWalletVerification({boardJobId:data.boardJobId,internId:data.internId});
+   const result=await executeInternWork({boardJobId:data.boardJobId,internId:data.internId});
    return NextResponse.json(result,{status:200,headers});
  }catch(error){
    if(error instanceof WorkExecutionError)
