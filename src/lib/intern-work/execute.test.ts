@@ -146,9 +146,10 @@ test("bound catalog inference produces a review-only report, not a payment or ve
    getJob:async()=>details,getEvidence:async()=>ev,
    summarize:async()=>({text,modelId:"gemini-flash-latest",usedMock:false})
  });
- assert.equal(result.report.serviceId,"ai_agent_evaluation");
- assert.equal(result.report.verificationStatus,"PENDING_INDEPENDENT_VERIFIER");
- assert.equal(result.report.chainEvidence.escrowStatus,2);
+ const report=result.report as Record<string,unknown>;
+ assert.equal(report.serviceId,"ai_agent_evaluation");
+ assert.equal(report.verificationStatus,"PENDING_INDEPENDENT_VERIFIER");
+ assert.equal((report.chainEvidence as ChainEvidence).escrowStatus,2);
  assert.match(result.resultHash,/^0x[0-9a-f]{64}$/);
  assert.equal(result.reportJson,JSON.stringify(result.report));
 });
