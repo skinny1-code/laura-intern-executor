@@ -124,6 +124,36 @@ export function assertJob(job:Job,internId:string){
  check(isAddress(target),"WALLET_TARGET_UNAVAILABLE");
  return {address:getAddress(target),source:targets.length?"job_description":"authenticated_hiring_wallet_fallback"};
 }
+/**
+ * An AI evaluation must include immutable observed outputs and assertions.
+ * The executor runs those assertions deterministically. It never invents
+ * the target agent, observed outputs or success criteria.
+ */
+export function evaluateAssignedAgent(job:Job){
+  check(job.serviceId==="ai_agent_evaluation","NOT_AGENT_EVALUATION");
+  const source=assertServiceEvidence(job);
+  check(!!source,"EVALUATION_INPUT_REQUIRED");
+  const observed=source as Record<string,unknown>;
+  const cases=observed.cases;
+  check(Array.isArray(cases)&&cases.length>0&&cases.length<=10,"EVALUATION_CASES_REQUIRED");
+  const results=cases.map((raw,index)=>{
+    check(!!raw&&typeof raw==="object"&&!Array.isArray(raw),"BAD_EVALUATION_CASE");
+    const c=raw as Record<string,unknown>;
+    check(typeof c.observedOutput==="string"&&c.observedOutput.length>0&&c.observedOutput.length<=16000,
+      "OBSERVED_AGENT_OUTPUT_REQUIRED");
+    check(Array.isArray(c.contains)&&c.contains.length>0&&c.contains.length<=32&&
+      c.contains.every(x=>typeof x==="string"&&x.length>0&&x.length<=512),
+      "ACCEPTANCE_CRITERIA_REQUIRED");
+    const checks=(c.contains as string[]).map(value=>({type:"contains",value,passed:(c.observedOutput as string).includes(value)}));
+    return {id:String(c.id??index+1),checks,passed:checks.every(x=>x.passed)};
+  });
+  const total=results.reduce((v,c)=>v+c.checks.length,0);
+  const passed=results.reduce((v,c)=>v+c.checks.filter(x=>x.passed).length,0);
+  return {schema:"laura.agent-evaluation/1",cases:results,
+    summary:{total,passed,scoreBps:Math.floor(passed*10000/total),passedAll:passed===total},
+    dataOrigin:"client_supplied_observed_outputs"};
+}
+
 export async function getBoardJob(jobId:string,fetcher:typeof fetch=fetch):Promise<Job>{
  check(/^agentjob:[a-f0-9]{64}$/.test(jobId),"INVALID_BOARD_JOB_ID");
  const token=String(process.env.LAURA_INTERN_WORK_TOKEN||"");
@@ -199,6 +229,7 @@ export async function executeInternWork(input:{boardJobId:string;internId:string
     "CHAIN_OR_ESCROW_MISMATCH");
   const evidence=assertServiceEvidence(job);
   check(!!evidence,"SERVICE_EVIDENCE_REQUIRED");
+  const evaluation=job.serviceId==="ai_agent_evaluation"?evaluateAssignedAgent(job):null;
   const chainEvidence=await (deps.getEvidence||getChainEvidence)(job,job.clientAddress);
   check(chainEvidence.escrowStatus===2&&chainEvidence.escrowIntern===input.internId&&
     same(chainEvidence.currentOwner,STAGING.owner)&&
@@ -226,7 +257,7 @@ export async function executeInternWork(input:{boardJobId:string;internId:string
     schema:"laura.intern-work.catalog-evidence/1",executor:"LAURA",serviceId:job.serviceId,
     boardJobId:job.id,onchainJobId:job.onchain!.jobId,internId:input.internId,
     payoutAccount:STAGING.payoutAccount,chainId:46630,requirementsHash:job.requirementsHash,
-    evidence,chainEvidence,analysis:llm.text.trim(),modelId:llm.modelId,
+    evidence,chainEvidence,evaluation,analysis:llm.text.trim(),modelId:llm.modelId,
     verificationStatus:"PENDING_INDEPENDENT_VERIFIER",
     limitations:["Customer-provided observations are not independent on-chain or external verification.",
       "No results, tests, security findings or financial reconciliation are certified by inference alone."]
