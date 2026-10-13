@@ -1,7 +1,7 @@
 import test from "node:test";
 import {createHash} from "node:crypto";
 import assert from "node:assert/strict";
-import {executeWalletVerification,executeInternWork,assertServiceEvidence,INTERN_WORK_SERVICES,assertJob,getBoardJob,STAGING,type Job,type ChainEvidence} from "./execute";
+import {executeWalletVerification,executeInternWork,evaluateAssignedAgent,assertServiceEvidence,INTERN_WORK_SERVICES,assertJob,getBoardJob,STAGING,type Job,type ChainEvidence} from "./execute";
 
 const ID="agentjob:"+"2e76eb74103f0f0e7e85063e5285c863329606f29904544bfdd605131e4cbeca";
 const BUYER="0x30b2fe82f904910065eeecb71bb3665937fb1de7";
@@ -137,7 +137,8 @@ test("non-wallet service refuses missing, forged, or unstructured acceptance evi
 test("bound catalog inference produces a review-only report, not a payment or verification claim",async()=>{
  const requirementsText=JSON.stringify({
    serviceId:"ai_agent_evaluation",observations:[{source:"case-1",value:"agent answer"}],
-   assertions:[{kind:"required_text",value:"agent"}]
+   assertions:[{kind:"required_text",value:"agent"}],
+   cases:[{id:"case-1",observedOutput:"agent answer",contains:["agent"]}]
  });
  const details={...job,serviceId:"ai_agent_evaluation",requirementsText,
    requirementsHash:"0x"+createHash("sha256").update(requirementsText).digest("hex")};
@@ -152,4 +153,25 @@ test("bound catalog inference produces a review-only report, not a payment or ve
  assert.equal((report.chainEvidence as ChainEvidence).escrowStatus,2);
  assert.match(result.resultHash,/^0x[0-9a-f]{64}$/);
  assert.equal(result.reportJson,JSON.stringify(result.report));
+});
+
+test("LAURA executes evaluation cases rather than grading its own prose",()=>{
+ const spec=JSON.stringify({serviceId:"ai_agent_evaluation",
+   observations:[{source:"recorded-test",value:"observed output"}],
+   assertions:[{type:"required_text",value:"pass"}],
+   cases:[{id:"p",observedOutput:"pass",contains:["pass"]},
+          {id:"f",observedOutput:"fail",contains:["pass"]}]});
+ const scored=evaluateAssignedAgent({...job,serviceId:"ai_agent_evaluation",
+   requirementsText:spec,requirementsHash:"0x"+createHash("sha256").update(spec).digest("hex")});
+ assert.equal(scored.summary.total,2);
+ assert.equal(scored.summary.passed,1);
+ assert.equal(scored.summary.scoreBps,5000);
+ assert.equal(scored.summary.passedAll,false);
+});
+test("LAURA refuses an AI eval without actual cases or acceptance assertions",()=>{
+ const spec=JSON.stringify({serviceId:"ai_agent_evaluation",
+   observations:[{source:"test",value:"observed"}],assertions:[{type:"contains",value:"ok"}]});
+ assert.throws(()=>evaluateAssignedAgent({...job,serviceId:"ai_agent_evaluation",
+   requirementsText:spec,requirementsHash:"0x"+createHash("sha256").update(spec).digest("hex")}),
+   /EVALUATION_CASES_REQUIRED/);
 });
