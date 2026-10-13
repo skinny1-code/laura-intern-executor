@@ -186,7 +186,7 @@ export type WorkResult={
  * for service-specific evidence. The independent acceptance gate remains separate.
  */
 export async function executeInternWork(input:{boardJobId:string;internId:string},
-  deps:{getJob?:(id:string)=>Promise<Job>;summarize?:(job:Job,evidence:Record<string,unknown>)=>Promise<{text:string;modelId:string;usedMock:boolean}>}={}
+  deps:{getJob?:(id:string)=>Promise<Job>;getEvidence?:(job:Job,target:string)=>Promise<ChainEvidence>;summarize?:(job:Job,evidence:Record<string,unknown>)=>Promise<{text:string;modelId:string;usedMock:boolean}>}={}
 ):Promise<WorkResult|{report:Record<string,unknown>;reportJson:string;resultHash:string;evidenceSha256:string}>{
   check(input?.internId===STAGING.internId,"UNSUPPORTED_TEST_INTERN");
   const job=await (deps.getJob||getBoardJob)(input.boardJobId);
@@ -199,7 +199,15 @@ export async function executeInternWork(input:{boardJobId:string;internId:string
     "CHAIN_OR_ESCROW_MISMATCH");
   const evidence=assertServiceEvidence(job);
   check(!!evidence,"SERVICE_EVIDENCE_REQUIRED");
-  const chainEvidence=await getChainEvidence(job,job.clientAddress);
+  const chainEvidence=await (deps.getEvidence||getChainEvidence)(job,job.clientAddress);
+  check(chainEvidence.escrowStatus===2&&chainEvidence.escrowIntern===input.internId&&
+    same(chainEvidence.currentOwner,STAGING.owner)&&
+    same(chainEvidence.escrowWorkerTba,STAGING.payoutAccount)&&
+    same(chainEvidence.escrowClient,job.clientAddress)&&
+    same(chainEvidence.escrowServiceHash,job.serviceHash)&&
+    same(chainEvidence.escrowRequirementsHash,job.requirementsHash)&&
+    chainEvidence.wallet.chainId===46630&&same(chainEvidence.wallet.address,job.clientAddress),
+    "UNTRUSTWORTHY_RPC_EVIDENCE");
   // Source details originate from immutable, hashed customer instructions.
   // Do not provide a signing or arbitrary tool interface to untrusted jobs.
   const modelSummary=deps.summarize|| (async(j:Job,ev:Record<string,unknown>)=>{
