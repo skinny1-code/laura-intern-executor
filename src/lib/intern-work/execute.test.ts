@@ -1,7 +1,7 @@
 import test from "node:test";
 import {createHash} from "node:crypto";
 import assert from "node:assert/strict";
-import {executeWalletVerification,assertJob,getBoardJob,STAGING,type Job,type ChainEvidence} from "./execute";
+import {executeWalletVerification,executeInternWork,assertServiceEvidence,INTERN_WORK_SERVICES,assertJob,getBoardJob,STAGING,type Job,type ChainEvidence} from "./execute";
 
 const ID="agentjob:"+"2e76eb74103f0f0e7e85063e5285c863329606f29904544bfdd605131e4cbeca";
 const BUYER="0x30b2fe82f904910065eeecb71bb3665937fb1de7";
@@ -116,4 +116,39 @@ test("work-only host denies every other route and never boots bots",async()=>{
  assert.match(instrumentation,/LAURA_INTERN_WORK_ONLY === "true"/);
  assert.ok(instrumentation.indexOf('LAURA_INTERN_WORK_ONLY === "true"')<
    instrumentation.indexOf('const { startBots }'));
+});
+
+test("all canonical work services are registered without changing existing wallet execution",()=>{
+ assert.equal(INTERN_WORK_SERVICES.length,13);
+ assert.equal(new Set(INTERN_WORK_SERVICES).size,13);
+ for(const serviceId of INTERN_WORK_SERVICES)
+   assert.ok(INTERN_WORK_SERVICES.includes(serviceId));
+ assert.equal(assertServiceEvidence(job),undefined);
+});
+test("non-wallet service refuses missing, forged, or unstructured acceptance evidence",()=>{
+ const base={...job,serviceId:"ai_agent_evaluation"};
+ assert.throws(()=>assertServiceEvidence(base),/SERVICE_EVIDENCE_REQUIRED/);
+ assert.throws(()=>assertServiceEvidence({...base,requirementsText:"Testv4"}),/INSTRUCTIONS_HASH_MISMATCH/);
+ const description=JSON.stringify({serviceId:"ai_agent_evaluation",observations:[{source:"client-case",value:"observed output"}]});
+ const withHash={...base,requirementsText:description,requirementsHash:"0x"+createHash("sha256").update(description).digest("hex")};
+ assert.throws(()=>assertServiceEvidence(withHash),/EVALUATION_ASSERTIONS_REQUIRED/);
+ assert.throws(()=>assertServiceEvidence({...withHash,serviceId:"smart_contract_security_triage"}),/SERVICE_EVIDENCE_MISMATCH/);
+});
+test("bound catalog inference produces a review-only report, not a payment or verification claim",async()=>{
+ const requirementsText=JSON.stringify({
+   serviceId:"ai_agent_evaluation",observations:[{source:"case-1",value:"agent answer"}],
+   assertions:[{kind:"required_text",value:"agent"}]
+ });
+ const details={...job,serviceId:"ai_agent_evaluation",requirementsText,
+   requirementsHash:"0x"+createHash("sha256").update(requirementsText).digest("hex")};
+ const ev={...evidence,escrowRequirementsHash:details.requirementsHash};
+ const result=await executeInternWork({boardJobId:ID,internId:"3536"},{
+   getJob:async()=>details,getEvidence:async()=>ev,
+   summarize:async()=>({text,modelId:"gemini-flash-latest",usedMock:false})
+ });
+ assert.equal(result.report.serviceId,"ai_agent_evaluation");
+ assert.equal(result.report.verificationStatus,"PENDING_INDEPENDENT_VERIFIER");
+ assert.equal(result.report.chainEvidence.escrowStatus,2);
+ assert.match(result.resultHash,/^0x[0-9a-f]{64}$/);
+ assert.equal(result.reportJson,JSON.stringify(result.report));
 });
