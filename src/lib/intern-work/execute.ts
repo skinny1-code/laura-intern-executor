@@ -6,7 +6,7 @@ import {createOpenAI} from "@ai-sdk/openai";
 // LAURA work-only provider override. Other swarm tasks retain their configured model.
 // Google supports the OpenAI-compatible chat API at this official base URL.
 export function resolveInternWorkModel(){
-  const key=String(process.env.GEMINI_API_KEY||"");
+  const key=String(process.env.GEMINI_API_KEY||process.env.GOOGLE_GENERATIVE_AI_API_KEY||"");
   if(!key)return resolveModel();
   const modelId=String(process.env.LAURA_INTERN_GEMINI_MODEL||"gemini-flash-latest");
   if(!/^gemini-[a-z0-9.-]{2,80}$/.test(modelId))throw new WorkExecutionError("INVALID_GEMINI_MODEL");
