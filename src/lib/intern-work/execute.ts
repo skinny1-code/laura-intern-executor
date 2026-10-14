@@ -160,7 +160,8 @@ export type ChainEvidence={
  escrowIntern:string;escrowStatus:number;escrowServiceHash:string;
  escrowRequirementsHash:string;escrowAmount:string;escrowDeadline:number;
  wallet:{chainId:number;blockNumber:string;blockTimestamp:number;address:string;
- nativeBalanceWei:string;transactionCount:number;codeBytes:number};
+ nativeBalanceWei:string;transactionCount:number;codeBytes:number;
+     readWindowStartBlock?:string;readWindowEndBlock?:string;readWindowAtomic?:boolean};
 };
 export function assertJob(job:Job,internId:string){
  check(job&&/^agentjob:[a-f0-9]{64}$/.test(job.id),"INVALID_BOARD_JOB_ID");
@@ -256,9 +257,9 @@ export async function getChainEvidence(job:Job,target:string):Promise<ChainEvide
  check(chainJob[6]>=BigInt(job.budgetWei),"ESCROW_UNDERFUNDED");
  check(block.timestamp<BigInt(chainJob[7]),"JOB_DEADLINE_EXPIRED");
  const address=getAddress(target);
- // This Robinhood endpoint does not consistently support eth_getBalance at a
- // numbered historical block. Read the tip and accept it only if the same
- // block brackets all three wallet RPC observations.
+ // Robinhood testnet rejects historical eth_getBalance parameters and advances
+ // blocks while parallel latest-state reads are in flight. Record the bounded
+ // observation window instead of falsely requiring one atomic block.
  const snapshot=await (async()=>{
    for(let attempt=0;attempt<4;attempt++){
      const before=await rpcRead("wallet.snapshotBefore",client.getBlock());
@@ -268,11 +269,15 @@ export async function getChainEvidence(job:Job,target:string):Promise<ChainEvide
        rpcRead("wallet.getCodeLatest",client.getBytecode({address}))
      ]);
      const after=await rpcRead("wallet.snapshotAfter",client.getBlock());
-     if(before.number===after.number&&before.hash===after.hash)
-       return {balance,nonce,code,block:after};
-     console.warn("[laura-intern-work] WALLET_SNAPSHOT_RETRY",attempt+1);
+     if(after.number>=before.number &&
+        after.number-before.number<=8n &&
+        (before.number!==after.number||before.hash===after.hash))
+       return {balance,nonce,code,block:after,
+         fromBlock:String(before.number),toBlock:String(after.number),
+         atomic:before.number===after.number};
+     console.warn("[laura-intern-work] WALLET_READ_WINDOW_RETRY",attempt+1);
    }
-   throw new WorkExecutionError("RPC_SNAPSHOT_BLOCK_CHANGED");
+   throw new WorkExecutionError("RPC_WALLET_READ_WINDOW_UNSTABLE");
  })();
  return {currentOwner:owner,escrowClient:chainJob[0],escrowWorkerTba:chainJob[1],
    escrowIntern:String(chainJob[5]),escrowStatus:Number(chainJob[12]),
@@ -280,7 +285,9 @@ export async function getChainEvidence(job:Job,target:string):Promise<ChainEvide
    escrowAmount:String(chainJob[6]),escrowDeadline:Number(chainJob[7]),
    wallet:{chainId:46630,blockNumber:String(snapshot.block.number),blockTimestamp:Number(snapshot.block.timestamp),
      address,nativeBalanceWei:String(snapshot.balance),transactionCount:snapshot.nonce,
-     codeBytes:snapshot.code?Math.max(0,(snapshot.code.length-2)/2):0}};
+     codeBytes:snapshot.code?Math.max(0,(snapshot.code.length-2)/2):0,
+     readWindowStartBlock:snapshot.fromBlock,readWindowEndBlock:snapshot.toBlock,
+     readWindowAtomic:snapshot.atomic}};
 }
 export type WorkResult={
  report:{
@@ -376,7 +383,10 @@ export async function executeWalletVerification(input:{boardJobId:string;internI
      target.source==="authenticated_hiring_wallet_fallback"?
        "Job did not specify a wallet target; authenticated hiring wallet examined.":
        "Only the single target wallet explicitly in the job description was examined.",
-     "Independent verifier must assess factual accuracy and buyer requirements before accepting escrow work."]
+     "Independent verifier must assess factual accuracy and buyer requirements before accepting escrow work.",
+     evidence.wallet.readWindowAtomic===false?
+       "Wallet balance, nonce and code were sampled across blocks "+evidence.wallet.readWindowStartBlock+"–"+evidence.wallet.readWindowEndBlock+"; not an atomic historical snapshot.":
+       "Wallet state observations were sampled from the latest RPC state."]
  };
  const reportJson=JSON.stringify(report);
  check(Buffer.byteLength(reportJson)<=16384,"REPORT_TOO_LARGE");
