@@ -171,13 +171,20 @@ export async function getBoardJob(jobId:string,fetcher:typeof fetch=fetch):Promi
  return job;
 }
 export async function getChainEvidence(job:Job,target:string):Promise<ChainEvidence>{
+ // Attribute Robinhood RPC errors to the exact read without exposing credentials.
+ const rpcRead=<T>(stage:string,promise:Promise<T>):Promise<T>=>promise.catch(error=>{
+   const err=error as {shortMessage?:string;details?:string};
+   console.error("[laura-intern-work] RPC_EVIDENCE_READ_FAILED",stage,
+     String(err.shortMessage||err.details||"unknown").slice(0,220));
+   throw error;
+ });
  const client=createPublicClient({chain:{id:46630,name:"Robinhood Testnet",
    nativeCurrency:{name:"Ether",symbol:"ETH",decimals:18},
    rpcUrls:{default:{http:[STAGING.rpc]}}},transport:http(STAGING.rpc,{timeout:20000,retryCount:1})});
  const [chainId,block,chainJob,owner]=await Promise.all([
-   client.getChainId(),client.getBlock(),
-   client.readContract({address:STAGING.escrow as Address,abi:ESCROW_ABI,functionName:"jobs",args:[BigInt(job.onchain!.jobId)]}),
-   client.readContract({address:STAGING.nft as Address,abi:NFT_ABI,functionName:"ownerOf",args:[3536n]})
+   rpcRead("eth_chainId",client.getChainId()),rpcRead("getBlock",client.getBlock()),
+   rpcRead("escrow.jobs",client.readContract({address:STAGING.escrow as Address,abi:ESCROW_ABI,functionName:"jobs",args:[BigInt(job.onchain!.jobId)]})),
+   rpcRead("intern.ownerOf",client.readContract({address:STAGING.nft as Address,abi:NFT_ABI,functionName:"ownerOf",args:[3536n]}))
  ]);
  check(chainId===46630&&block.timestamp>0n,"CHAIN_MISMATCH");
  check(Number(chainJob[12])===2&&chainJob[5]===3536n,"ESCROW_NOT_ASSIGNED_TO_3536");
@@ -189,9 +196,9 @@ export async function getChainEvidence(job:Job,target:string):Promise<ChainEvide
  check(block.timestamp<BigInt(chainJob[7]),"JOB_DEADLINE_EXPIRED");
  const address=getAddress(target);
  const [balance,nonce,code]=await Promise.all([
-   client.getBalance({address,blockNumber:block.number}),
-   client.getTransactionCount({address,blockNumber:block.number}),
-   client.getBytecode({address,blockNumber:block.number})
+   rpcRead("wallet.getBalanceAtBlock",client.getBalance({address,blockNumber:block.number})),
+   rpcRead("wallet.getNonceAtBlock",client.getTransactionCount({address,blockNumber:block.number})),
+   rpcRead("wallet.getCodeAtBlock",client.getBytecode({address,blockNumber:block.number}))
  ]);
  return {currentOwner:owner,escrowClient:chainJob[0],escrowWorkerTba:chainJob[1],
    escrowIntern:String(chainJob[5]),escrowStatus:Number(chainJob[12]),
