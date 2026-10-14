@@ -19,6 +19,7 @@ function authorized(req:NextRequest):boolean{
  * arbitrary RPC override, or sandbox/mock reports are allowed.
  */
 export async function POST(req:NextRequest){
+ console.info("[laura-intern-work] REQUEST_HANDLER_ENTERED");
  if(process.env.VIEWER_MODE==="1" || process.env.NEXT_PUBLIC_VIEWER_MODE==="1")
    return NextResponse.json({error:"LAURA_PUBLIC_VIEWER_CANNOT_EXECUTE_WORK"},{status:403,headers});
  if(process.env.LAURA_INTERN_WORK_ENABLED!=="true"||!process.env.LAURA_INTERN_WORK_TOKEN)
@@ -36,6 +37,7 @@ export async function POST(req:NextRequest){
      return NextResponse.json({error:"INVALID_INPUT"},{status:400,headers});
    // Load inside the guarded request, so a failed module initialization is
    // visible as a typed response and an actionable server log, never a silent 502.
+   console.info("[laura-intern-work] REQUEST_AUTHORIZED_LOADING_EXECUTOR");
    executor=await import("@/lib/intern-work/execute");
    const result=await executor.executeInternWork({boardJobId:data.boardJobId,internId:data.internId});
    return NextResponse.json(result,{status:200,headers});
