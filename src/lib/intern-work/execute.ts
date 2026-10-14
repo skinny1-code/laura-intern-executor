@@ -195,18 +195,31 @@ export async function getChainEvidence(job:Job,target:string):Promise<ChainEvide
  check(chainJob[6]>=BigInt(job.budgetWei),"ESCROW_UNDERFUNDED");
  check(block.timestamp<BigInt(chainJob[7]),"JOB_DEADLINE_EXPIRED");
  const address=getAddress(target);
- const [balance,nonce,code]=await Promise.all([
-   rpcRead("wallet.getBalanceAtBlock",client.getBalance({address,blockNumber:block.number})),
-   rpcRead("wallet.getNonceAtBlock",client.getTransactionCount({address,blockNumber:block.number})),
-   rpcRead("wallet.getCodeAtBlock",client.getBytecode({address,blockNumber:block.number}))
- ]);
+ // This Robinhood endpoint does not consistently support eth_getBalance at a
+ // numbered historical block. Read the tip and accept it only if the same
+ // block brackets all three wallet RPC observations.
+ const snapshot=await (async()=>{
+   for(let attempt=0;attempt<4;attempt++){
+     const before=await rpcRead("wallet.snapshotBefore",client.getBlock());
+     const [balance,nonce,code]=await Promise.all([
+       rpcRead("wallet.getBalanceLatest",client.getBalance({address})),
+       rpcRead("wallet.getNonceLatest",client.getTransactionCount({address})),
+       rpcRead("wallet.getCodeLatest",client.getBytecode({address}))
+     ]);
+     const after=await rpcRead("wallet.snapshotAfter",client.getBlock());
+     if(before.number===after.number&&before.hash===after.hash)
+       return {balance,nonce,code,block:after};
+     console.warn("[laura-intern-work] WALLET_SNAPSHOT_RETRY",attempt+1);
+   }
+   throw new WorkExecutionError("RPC_SNAPSHOT_BLOCK_CHANGED");
+ })();
  return {currentOwner:owner,escrowClient:chainJob[0],escrowWorkerTba:chainJob[1],
    escrowIntern:String(chainJob[5]),escrowStatus:Number(chainJob[12]),
    escrowServiceHash:chainJob[13],escrowRequirementsHash:chainJob[14],
    escrowAmount:String(chainJob[6]),escrowDeadline:Number(chainJob[7]),
-   wallet:{chainId:46630,blockNumber:String(block.number),blockTimestamp:Number(block.timestamp),
-     address,nativeBalanceWei:String(balance),transactionCount:nonce,
-     codeBytes:code?Math.max(0,(code.length-2)/2):0}};
+   wallet:{chainId:46630,blockNumber:String(snapshot.block.number),blockTimestamp:Number(snapshot.block.timestamp),
+     address,nativeBalanceWei:String(snapshot.balance),transactionCount:snapshot.nonce,
+     codeBytes:snapshot.code?Math.max(0,(snapshot.code.length-2)/2):0}};
 }
 export type WorkResult={
  report:{
