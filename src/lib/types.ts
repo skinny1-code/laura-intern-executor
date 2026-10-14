@@ -521,7 +521,7 @@ export interface CycleRun {
   llmRepairs?: number;
 }
 
-export type LlmProvider = "anthropic" | "openai" | "mock";
+export type LlmProvider = "anthropic" | "openai" | "gemini" | "mock";
 
 export interface Settings {
   tokenAddress: string;
