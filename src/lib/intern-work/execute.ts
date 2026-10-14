@@ -1,4 +1,5 @@
 import {createHash} from "node:crypto";
+import {readFileSync} from "node:fs";
 import {createPublicClient, getAddress, http, isAddress, keccak256, parseAbi, toHex, type Address} from "viem";
 import {generateChat,resolveModel} from "@/lib/swarm/llm";
 import {createOpenAI} from "@ai-sdk/openai";
@@ -6,8 +7,28 @@ import {createOpenAI} from "@ai-sdk/openai";
 // LAURA work-only provider override. Other swarm tasks retain their configured model.
 // Google supports the OpenAI-compatible chat API at this official base URL.
 export function resolveInternWorkModel(){
-  const key=String(process.env.GEMINI_API_KEY||process.env.GOOGLE_GENERATIVE_AI_API_KEY||"");
-  if(!key)return resolveModel();
+  // Render secret environment variables appear in process.env, while Render
+  // secret files are mounted under /etc/secrets and need an explicit read.
+  // Never log credential values; keep all inference and evidence fail-closed.
+  let key=String(process.env.GEMINI_API_KEY||process.env.GOOGLE_GENERATIVE_AI_API_KEY||"").trim();
+  let keySource=key?"environment":"none";
+  if(!key){
+    for(const filename of ["GEMINI_API_KEY","GOOGLE_GENERATIVE_AI_API_KEY"]){
+      try{
+        const candidate=readFileSync("/etc/secrets/"+filename,"utf8").trim();
+        if(candidate){key=candidate;keySource="render_secret_file";break;}
+      }catch(error){
+        if((error as NodeJS.ErrnoException).code!=="ENOENT")
+          throw new WorkExecutionError("GEMINI_SECRET_FILE_UNREADABLE");
+      }
+    }
+  }
+  if(!key){
+    const fallback=resolveModel();
+    if(!fallback.model)console.error("[laura-intern-work] NO_USABLE_LLM_CREDENTIAL_IN_RUNTIME");
+    return fallback;
+  }
+  console.info("[laura-intern-work] Gemini credential source:",keySource);
   const modelId=String(process.env.LAURA_INTERN_GEMINI_MODEL||"gemini-flash-latest");
   if(!/^gemini-[a-z0-9.-]{2,80}$/.test(modelId))throw new WorkExecutionError("INVALID_GEMINI_MODEL");
   return {provider:"openai" as const,modelId,
