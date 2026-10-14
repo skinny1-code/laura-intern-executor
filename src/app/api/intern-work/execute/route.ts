@@ -40,8 +40,10 @@ export async function POST(req:NextRequest){
    const result=await executor.executeInternWork({boardJobId:data.boardJobId,internId:data.internId});
    return NextResponse.json(result,{status:200,headers});
  }catch(error){
-   if(executor&&error instanceof executor.WorkExecutionError)
+   if(executor&&error instanceof executor.WorkExecutionError){
+     console.warn("[laura-intern-work] WORK_REJECTED",error.code);
      return NextResponse.json({error:error.code},{status:422,headers});
+   }
    if(error instanceof SyntaxError)
      return NextResponse.json({error:"INVALID_JSON"},{status:400,headers});
    const code=error instanceof Error?error.message:"UNKNOWN_ERROR";
