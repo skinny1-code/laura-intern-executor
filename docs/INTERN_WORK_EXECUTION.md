@@ -1,5 +1,7 @@
 # LAURA × Stonk Intern Work — ACTIVE QA INTEGRATION STATUS
 
+**2026-10-19 18:27 UTC updated transport evidence:** Existing Render deployment `dep-dbb5u4qjnfac73f3v2k0` of this branch's `fb51a50` started the isolated Intern work handler. After restarting the Stonk QA board (`dep-dbb61pbncjis73dje7l0`), board log `QA_LAURA_TRANSPORT_PREFLIGHT {"ok":true,"status":422,"reason":"INVALID_BOARD_JOB_ID"}` proved that the live LAURA handler was reachable and rejected the deliberate invalid ID. Previous HTTP 429/502 gateway symptom was not reproduced by that probe. This is transport proof only, **not** a real paid job or verifier signature. Stonk signer secret is still absent per verifier cron log at 18:25:48 UTC. Documentation for root cause, new escrow and deployment receipts resides in Stonk `CURRENT_RELEASE_STATUS.md`; no signing credentials belong in LAURA.
+
 **Audit/repair: 2026-10-19.** This section takes precedence over the older initial draft instructions below; do not claim the new escrow is end-to-end certified until real receipts exist.
 
 - Existing LAURA feature-branch PR #2, head before this repair `5c14edc9f0fdef67248dfe2ae4be8852c3dcf537`, was already deployed to Render `srv-db6pp2om7kps73asabr0` on 2026-10-15. Do **not** rebuild the independent evidence service.
