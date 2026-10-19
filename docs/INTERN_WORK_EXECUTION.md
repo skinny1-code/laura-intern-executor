@@ -1,3 +1,18 @@
+# LAURA × Stonk Intern Work — ACTIVE QA INTEGRATION STATUS
+
+**Audit/repair: 2026-10-19.** This section takes precedence over the older initial draft instructions below; do not claim the new escrow is end-to-end certified until real receipts exist.
+
+- Existing LAURA feature-branch PR #2, head before this repair `5c14edc9f0fdef67248dfe2ae4be8852c3dcf537`, was already deployed to Render `srv-db6pp2om7kps73asabr0` on 2026-10-15. Do **not** rebuild the independent evidence service.
+- Existing `src/lib/intern-work/execute.ts` was pinned to the superseded escrow `0x656E46dc55E383b1f927617301A3E1580a576B2D`. That pin would refuse a new single-Intern QA job.
+- **Verified replacement deployed on Robinhood Testnet chain 46630:** `0x754cb296Fa60DAcA5f4DCb2E9DF750267114DD33`. Source of truth: [Stonk escrow deployment workflow #39183713778](https://github.com/skinny1-code/stonk-intern-work/actions/runs/39183713778), deploy tx `0xb1a207d7da0f6babe3ffde76314daa1716bcb343ae8b68ca9a966c84aacfd719`, artifact `single-intern-escrow-testnet-proof` / `12157386803`.
+- Repair in existing branch commit `431a65b5bd63837a94d2d527111e5eca7b6b717d`: only known chain-46630 escrows are permitted; deploy can select `LAURA_INTERN_ESCROW_ADDRESS=0x754cb296Fa60DAcA5f4DCb2E9DF750267114DD33` **server side**. Invalid/custom addresses fail closed. Existing owner NFT, Intern #3536, payout TBA, board allowlist, RPC, read-only policy, LLM evidence boundaries, no-key-custody policy remain unchanged.
+- Correct new test must use `LAURA_WORK_BOARD_URL=https://stonk-intern-work-pr45-qa.onrender.com` and an authenticated original board record from the new escrow. The previous LAURA default is preserved for legacy isolated testing; do not silently select an arbitrary chain or board.
+- On 2026-10-19, the QA gateway reported retries with HTTP **429** and then **502** for this LAURA Render service. The last directly inspected LAURA application log showed a running host and an authenticated handler rejecting an invalid job ID, **not** a successful new-job execution. Network and model reliability must be retested after deployment; do not mark this gate passing merely because the host's build is green.
+- Release sequence: run branch CI -> deploy/restart existing LAURA Render host on reviewed commit -> set `LAURA_INTERN_ESCROW_ADDRESS` via Render Environment -> confirm authenticated read-only real-model execution for a *fresh* funded, assigned job -> return immutable evidence -> independent Stonk verifier approval and final receipt. Never place signer private keys on LAURA.
+- For every LAURA/Intern change, record its precise SHA, CI runs, Render deployment ID, signer-free evidence proof, upstream failures, and rollback in this existing file. No false success claims, no hardcoded credentials, and no new parallel executor.
+
+---
+
 # LAURA × Stonk Intern Work — bounded wallet verification
 
 Status: **feature branch / draft PR. Not deployed or enabled.** Does not certify paid work.
