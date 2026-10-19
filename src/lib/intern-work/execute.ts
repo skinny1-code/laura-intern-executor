@@ -85,7 +85,15 @@ export const STAGING=Object.freeze({
  })(),
  chainId:46630,
  rpc:"https://rpc.testnet.chain.robinhood.com",
- escrow:"0x656E46dc55E383b1f927617301A3E1580a576B2D",
+ // New escrow is from successful Robinhood testnet deployment run 39183713778.
+ // Do not accept arbitrary user/API-supplied contracts or any mainnet chain.
+ escrow:(()=>{
+   const value=String(process.env.LAURA_INTERN_ESCROW_ADDRESS||"0x656E46dc55E383b1f927617301A3E1580a576B2D").trim();
+   if(!["0x656e46dc55e383b1f927617301a3e1580a576b2d",
+        "0x754cb296fa60daca5f4dcb2e9df750267114dd33"].includes(value.toLowerCase()))
+     throw new Error("LAURA_ESCROW_NOT_ALLOWLISTED");
+   return value;
+ })(),
  nft:"0xf08B19FaAC89cF15586C670D01842f11bC603e8c",
  internId:"3536",
  owner:"0x58db62a8a1b9a907b6062d8e766d3817aa5d1978",
