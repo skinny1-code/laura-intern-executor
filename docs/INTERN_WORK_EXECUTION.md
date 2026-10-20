@@ -2,6 +2,8 @@
 
 ## 2026-10-20 — read-only plain-instruction draft lane
 
+**2026-10-20 10:54 UTC live deployment evidence:** Existing Render service `srv-db6pp2om7kps73asabr0` updated to branch SHA `63d3c805a01b2ccf8a499aa2e01724a29d0160ae` with deployment `dep-dbbkg3eq1p3s73ctq3k0`, status **LIVE** 10:54:58 UTC. The build succeeded, Next.js was Ready, and the existing isolated Intern Work API reported swarm/other bots disabled. Both dedicated LAURA GitHub CI runs on this SHA passed. Stonk QA web deployment `dep-dbbkh5bncjis739259h0` at SHA `aa1b405cea0930666327317d681f728219db11b8` became LIVE 10:55:59 UTC with five green checks. At 10:55:52 UTC the QA transport preflight received expected authenticated application response `422 INVALID_BOARD_JOB_ID` for an intentionally invalid ID. **No actual non-wallet job's private draft or customer review acceptance has yet been certified in this rollout.** The new instruction class has no on-chain approval/payout rights; wallet-verification's previously certified Test16 remains separate and unchanged.
+
 The private `POST /api/intern-work/execute` handler now supports **two distinct non-wallet input modes** without changing historical funded escrow terms:
 
 1. **AI_EVIDENCE_TASK:** Existing immutable JSON `{serviceId,observations,assertions,...}` continues through `assertServiceEvidence`, deterministic evaluation and independent-review-required `laura.intern-work.catalog-evidence/1` schema. Inference alone cannot certify these observations.
