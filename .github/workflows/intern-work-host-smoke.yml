@@ -1,0 +1,30 @@
+name: Isolated LAURA Worker Host Smoke
+on:
+  push:
+    branches: [feat/intern-work-laura-execution-20261012]
+    paths: [.github/workflows/intern-work-host-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Verify deployed worker-only route allowlist and auth
+        run: |
+          set -euo pipefail
+          BASE="https://laura-intern-execution-qa.onrender.com"
+          health="$(curl -sSL --max-time 60 -w '%{http_code}' -o /tmp/laura-health-response "$BASE/api/health")"
+          echo "LAURA_RENDER_HEALTH_HTTP=$health"
+          if test "$health" != "200"; then
+            echo "LAURA_RENDER_HEALTH_FAILED: test stopped before authenticated work"
+            exit 1
+          fi
+          jq -e '.ok==true and .autopilot==false' </tmp/laura-health-response >/dev/null
+          status="$(curl -sSL -w '%{http_code}' -o /dev/null --max-time 45 -X POST "$BASE/api/intern-work/execute" -H 'content-type: application/json' -d '{"internId":"3536","boardJobId":"agentjob:0000000000000000000000000000000000000000000000000000000000000000"}')"
+          test "$status" = "401"
+          ops="$(curl -sSL -w '%{http_code}' -o /dev/null --max-time 45 "$BASE/api/ops/status")"
+          test "$ops" = "404"
+          root="$(curl -sSL -w '%{http_code}' -o /dev/null --max-time 45 "$BASE/")"
+          test "$root" = "404"
+          echo "PASS_RENDER_QA_WORK_ONLY_EXECUTOR_UP_NO_SWARM_AND_UNAUTHORIZED_DENIED"
