@@ -186,11 +186,12 @@ test("plain-language instruction produces a private unverified draft with immuta
    getJob:async()=>plain,getEvidence:async()=>({...evidence,escrowRequirementsHash:requirementsHash}),
    summarize:async()=>({text:"Draft review: verify the escrow source and obtain the missing protocol events before making any claim.",modelId:"test-real-model",usedMock:false})
  });
- assert.equal(output.report.schema,"laura.intern-work.instruction-draft/1");
- assert.equal(output.report.jobClass,"AI_INSTRUCTION_TASK");
- assert.equal(output.report.verificationStatus,"CUSTOMER_REVIEW_REQUIRED");
- assert.equal(output.report.onchainSubmitted,false);
- assert.equal(output.report.requirementsHash,requirementsHash);
+ const draft=output.report as Record<string,unknown>;
+ assert.equal(draft.schema,"laura.intern-work.instruction-draft/1");
+ assert.equal(draft.jobClass,"AI_INSTRUCTION_TASK");
+ assert.equal(draft.verificationStatus,"CUSTOMER_REVIEW_REQUIRED");
+ assert.equal(draft.onchainSubmitted,false);
+ assert.equal(draft.requirementsHash,requirementsHash);
  assert.equal(output.resultHash,keccak256(toHex(output.reportJson)));
  assert.equal(output.evidenceSha256,createHash("sha256").update(output.reportJson).digest("hex"));
  assert.equal(JSON.stringify(output.report),output.reportJson);
