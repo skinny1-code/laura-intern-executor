@@ -1,5 +1,6 @@
 import test from "node:test";
 import {createHash} from "node:crypto";
+import {keccak256,toHex} from "viem";
 import assert from "node:assert/strict";
 import {executeWalletVerification,executeInternWork,evaluateAssignedAgent,assertServiceEvidence,INTERN_WORK_SERVICES,assertJob,getBoardJob,STAGING,type Job,type ChainEvidence} from "./execute";
 
@@ -175,3 +176,37 @@ test("LAURA refuses an AI eval without actual cases or acceptance assertions",()
    requirementsText:spec,requirementsHash:"0x"+createHash("sha256").update(spec).digest("hex")}),
    /EVALUATION_CASES_REQUIRED/);
 });
+
+test("plain-language instruction produces a private unverified draft with immutable hashes",async()=>{
+ const instructions="Prepare a read-only review plan for this project and list unverified assumptions.";
+ const requirementsHash="0x"+createHash("sha256").update(instructions).digest("hex");
+ const plain={...job,serviceId:"blockchain_research",jobClass:"AI_INSTRUCTION_TASK",
+   requirementsText:instructions,requirementsHash};
+ const output=await executeInternWork({boardJobId:ID,internId:"3536"},{
+   getJob:async()=>plain,getEvidence:async()=>({...evidence,escrowRequirementsHash:requirementsHash}),
+   summarize:async()=>({text:"Draft review: verify the escrow source and obtain the missing protocol events before making any claim.",modelId:"test-real-model",usedMock:false})
+ });
+ assert.equal(output.report.schema,"laura.intern-work.instruction-draft/1");
+ assert.equal(output.report.jobClass,"AI_INSTRUCTION_TASK");
+ assert.equal(output.report.verificationStatus,"CUSTOMER_REVIEW_REQUIRED");
+ assert.equal(output.report.onchainSubmitted,false);
+ assert.equal(output.report.requirementsHash,requirementsHash);
+ assert.equal(output.resultHash,keccak256(toHex(output.reportJson)));
+ assert.equal(output.evidenceSha256,createHash("sha256").update(output.reportJson).digest("hex"));
+ assert.equal(JSON.stringify(output.report),output.reportJson);
+});
+
+test("instruction execution rejects mutated escrow terms and mock model output",async()=>{
+ const instructions="Review the signed job and prepare a bounded draft.";
+ const requirementsHash="0x"+createHash("sha256").update(instructions).digest("hex");
+ const base={...job,serviceId:"blockchain_research",jobClass:"AI_INSTRUCTION_TASK",
+   requirementsText:instructions,requirementsHash};
+ const goodEvidence={...evidence,escrowRequirementsHash:requirementsHash};
+ const input={boardJobId:ID,internId:"3536"};
+ const stub={getJob:async()=>base,getEvidence:async()=>goodEvidence,
+   summarize:async()=>({text:"Proposed summary with explicit missing evidence and no verified completion claims.",modelId:"mock",usedMock:true})};
+ await assert.rejects(()=>executeInternWork(input,{...stub,getJob:async()=>({...base,requirementsText:instructions+" changed"})}),/INSTRUCTIONS_HASH_MISMATCH/);
+ await assert.rejects(()=>executeInternWork(input,{...stub,getEvidence:async()=>({...goodEvidence,escrowRequirementsHash:HASH})}),/UNTRUSTWORTHY_RPC_EVIDENCE/);
+ await assert.rejects(()=>executeInternWork(input,stub),/REAL_LAURA_INFERENCE_REQUIRED/);
+});
+
